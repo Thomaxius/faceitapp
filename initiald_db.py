@@ -42,6 +42,7 @@ async def create_initial_tables():
         (
             id serial PRIMARY KEY,
             player_guid VARCHAR REFERENCES player(player_guid) NOT NULL,
+            player_team VARCHAR,
             assists SMALLINT ,
             deaths SMALLINT,
             headshots SMALLINT,

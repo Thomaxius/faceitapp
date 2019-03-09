@@ -7,10 +7,10 @@ async def insert_match(winner_team_id, best_of, competition_id, game_id, game_mo
     print("Inserted match ", winner_team_id, best_of, competition_id, game_id, game_mode, match_id, match_round, played, map, winner_team_score, loser_team_score, started_at, finished_at, status)
 
 
-async def insert_match_player_stats(player_guid, assists, deaths, headshots, headshots_percentage, kd_ratio, kr_ratio, kills, mvps, penta_kills, quadro_kills, triple_kills, match_id, win):
-    await db.execute("INSERT INTO match_player_stats (player_guid, assists, deaths, headshots, headshots_percentage, kd_ratio, kr_ratio, kills, mvps, penta_kills, quadro_kills, triple_kills, match_id, win) "
-               "SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14 WHERE NOT EXISTS (SELECT match_id FROM match_player_stats WHERE match_id = $15 AND player_guid = $16)", player_guid, assists, deaths, headshots, headshots_percentage, kd_ratio, kr_ratio, kills, mvps, penta_kills, quadro_kills, triple_kills, match_id, win, match_id, player_guid)
-    print("Inserted stats ", player_guid, assists, deaths, headshots, headshots_percentage, kd_ratio, kr_ratio, kills, mvps, penta_kills, quadro_kills, triple_kills, match_id, win, match_id, player_guid)
+async def insert_match_player_stats(player_guid, player_team, assists, deaths, headshots, headshots_percentage, kd_ratio, kr_ratio, kills, mvps, penta_kills, quadro_kills, triple_kills, match_id, win):
+    await db.execute("INSERT INTO match_player_stats (player_guid, player_team, assists, deaths, headshots, headshots_percentage, kd_ratio, kr_ratio, kills, mvps, penta_kills, quadro_kills, triple_kills, match_id, win) "
+               "SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14, $15 WHERE NOT EXISTS (SELECT match_id FROM match_player_stats WHERE match_id = $16 AND player_guid = $17)", player_guid, player_team, assists, deaths, headshots, headshots_percentage, kd_ratio, kr_ratio, kills, mvps, penta_kills, quadro_kills, triple_kills, match_id, win, match_id, player_guid)
+    print("Inserted stats ", player_guid, player_team, assists, deaths, headshots, headshots_percentage, kd_ratio, kr_ratio, kills, mvps, penta_kills, quadro_kills, triple_kills, match_id, win, match_id, player_guid)
 
 
 async def get_player_info(player_guid):

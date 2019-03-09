@@ -8,15 +8,15 @@ faceit_config = config(section="faceit")['faceit']
 API_KEY = faceit_config['api_key']
 DEFAULT_HEADERS = {"accept": "application/json", "Authorization": "Bearer {0}".format(API_KEY)}
 MATCH_SEARCH_RANGE = int(faceit_config['match_search_range_s'])
-CHECK_INTERVAL = int(faceit_config['check_interval_s'])
 
-async def get_winner_and_loser_score(score_string):
+
+async def get_winner_and_loser_score(score_string): # Faceit api has score listed as "16 / 7"
     score1, score2 = score_string.replace(" ", "").split("/")
     score_list = [int(score1), int(score2)]
     return max(score_list), min(score_list)
 
 
-async def get_player_match_stats(match_id, player_guid, started_at, finished_at, status):
+async def get_player_match_stats(match_id, player_guid, started_at, finished_at, status): # Fetch player's stats from a specific match
     result = await faceit_api.get_match_stats(match_id)
     if result:
         best_of = int(result.get("rounds")[0].get("best_of"))
@@ -27,14 +27,15 @@ async def get_player_match_stats(match_id, player_guid, started_at, finished_at,
         match_round = int(result.get("rounds")[0].get("match_round"))
         played = int(result.get("rounds")[0].get("played"))
         map = result.get("rounds")[0].get("round_stats").get("Map")
-        winner_team_score, loser_team_score = await get_winner_and_loser_score(result.get("rounds")[0].get("round_stats").get("Score"))
+        winner_team_score, loser_team_score = await get_winner_and_loser_score(result.get("rounds")[0].get("round_stats").get("Score"))  # Faceit api has score listed as "16 / 7"
         winner_team_id = result.get("rounds")[0].get("round_stats").get("Winner")
-        teams = result.get("rounds")[0].get("teams")
-        await db.insert_match(winner_team_id, best_of, competition_id, game_id, game_mode, match_id, match_round, played, map, winner_team_score, loser_team_score, started_at, finished_at, status)
-        for team in teams:
+        teams = result.get("rounds")[0].get("teams") # Get the two teams that played in the game
+        await db.insert_match(winner_team_id, best_of, competition_id, game_id, game_mode, match_id, match_round, played, map, winner_team_score, loser_team_score, started_at, finished_at, status) # Add match stats
+        for team in teams: # Loop through each team
             players = team.get("players")
             for player in players:
-                if player.get("player_id") == player_guid:
+                if player.get("player_id") == player_guid: # If player is in this team
+                    player_team = team.get('team_id')
                     assists = int(player.get("player_stats").get("Assists"))
                     deaths = int(player.get("player_stats").get("Deaths"))
                     headshots = int(player.get("player_stats").get("Headshot"))
@@ -47,26 +48,22 @@ async def get_player_match_stats(match_id, player_guid, started_at, finished_at,
                     quadro_kills = int(player.get("player_stats").get("Quadro Kills"))
                     triple_kills = int(player.get("player_stats").get("Triple Kills"))
                     win = True if int(player.get("player_stats").get("Result")) == 1 else False
-                    await db.insert_match_player_stats(player_guid, assists, deaths, headshots, headshots_percentage, kd_ratio, kr_ratio, kills, mvps, penta_kills, quadro_kills, triple_kills, match_id, win)
+                    await db.insert_match_player_stats(player_guid, player_team, assists, deaths, headshots, headshots_percentage, kd_ratio, kr_ratio, kills, mvps, penta_kills, quadro_kills, triple_kills, match_id, win)
 
 
-async def parse_matches(matches, player_guid):
+async def parse_matches(matches, player_guid): # Parse list of matches that is fetched from the API, get some general match info that is not in the match stats
     matches = matches.get("items")
     for match in matches:
         match_id = match.get("match_id")
         started_at = match.get("started_at")
         finished_at = match.get("finished_at")
         status = match.get("status")
-        teams = match.get("teams")
-        for faction in teams:
-            players = teams.get(faction).get("players")
-            for x in players:
-                if x.get("player_id") == player_guid:
-                    await get_player_match_stats(match_id, player_guid, started_at, finished_at, status)
-                    await asyncio.sleep(0.1)
+        await get_player_match_stats(match_id, player_guid, started_at, finished_at, status) # Get player's match stats
+        await asyncio.sleep(0.01)
 
 
-async def add_latest_matches(player_guid, timestamp):
+
+async def add_latest_matches(player_guid, timestamp): # Check and add matches since last played match, if there are any
     from_timestamp = await db.get_latest_match_timestamp(player_guid)
     from_timestamp = int(from_timestamp)
     matches = await faceit_api.get_matches(player_guid, from_timestamp=from_timestamp)
@@ -79,22 +76,13 @@ async def add_latest_matches(player_guid, timestamp):
 
 async def add_all_matches(player_guid, timestamp):
     from_timestamp = await db.get_earliest_match_timestamp(player_guid)
-    from_timestamp = str(from_timestamp).replace('.0', '')
-    matches = await faceit_api.get_matches(player_guid, int(from_timestamp))
+    from_timestamp = int(from_timestamp)
+    matches = await faceit_api.get_matches(player_guid, from_timestamp)
     if len(matches.get("items", [])) > 0:
         print("Found %s matches " % len(matches))
         await parse_matches(matches, player_guid)
     else:
         print("No new matches to add.")
-
-
-async def do_initial_match_adding(player_guid):
-    from_timestamp = 0
-    to_timestamp = int(datetime.datetime.now().timestamp())
-    last_searched_from_timestamp = int(from_timestamp)
-    last_searched_to_timestamp = int(to_timestamp)
-    matches = await faceit_api.get_matches(player_guid, from_timestamp=from_timestamp,
-                                to_timestamp=to_timestamp)
 
 
 async def add_past_matches(player_guid):
@@ -106,31 +94,29 @@ async def add_past_matches(player_guid):
         total_found_matches = 0
         tries = 0
         to_timestamp = await db.get_earliest_match_timestamp(player_guid)
-        while total_found_matches < 100:
-            print('Trying to find more matches..')
+        while total_found_matches < 100: # We will start working only when we have found 100 matches
+            print('Trying to find more matches.. (attempt %s of %s' % (tries, 50))
             if to_timestamp:
                 to_timestamp = int(to_timestamp)
             else:
-                to_timestamp = int(datetime.datetime.now().timestamp())
+                to_timestamp = int(datetime.datetime.now().timestamp()) # If player has no matches added, we will find all matches until now
 
             if last_searched_from_timestamp:
-                from_timestamp = max((last_searched_from_timestamp - MATCH_SEARCH_RANGE), 0)
+                from_timestamp = max((last_searched_from_timestamp - MATCH_SEARCH_RANGE), 0) # Go back the amount of time specified in the config. By default, It's two weeks
             else:
-                from_timestamp = to_timestamp - MATCH_SEARCH_RANGE
+                from_timestamp = to_timestamp - MATCH_SEARCH_RANGE # Go back the amount of time specified in the config. By default, It's two weeks
 
             last_searched_to_timestamp = to_timestamp
             last_searched_from_timestamp = from_timestamp
 
             matches = await faceit_api.get_matches(player_guid, from_timestamp=from_timestamp,
-                                            to_timestamp=to_timestamp)
+                                            to_timestamp=to_timestamp) # Find matches from faceit api
             found_matches = len(matches.get("items", []))
             if found_matches > 0:
-                #print("Found %s matches " % found_matches)
                 if found_matches == total_found_matches:
                     tries += 1
                 total_found_matches = found_matches
-                #print("total found matches: ", total_found_matches)
-            if tries >= 50:
+            if tries >= 50: # We will go back 2 weeks a total number of 50 times, after which we will break and add found matches
                 tries = 0
                 print("No more matches found")
                 finished = True
@@ -192,17 +178,3 @@ async def check_for_new_matches(player_guid):
     await add_latest_matches(player_guid, last_match_timestamp)
 
 
-async def tasker():
-    print("Starting tasker..")
-    while True:
-        print("Doing tasks..")
-        records = await db.get_all_player_guids()
-        for record in records:
-            await check_for_elo_change(record['player_guid'])
-            await check_and_handle_nickname_change(record['player_guid'])
-            await check_for_new_matches(record['player_guid'])
-        print("Tasks done.")
-        await asyncio.sleep(CHECK_INTERVAL)
-
-loop = asyncio.get_event_loop()
-loop.run_until_complete(tasker())

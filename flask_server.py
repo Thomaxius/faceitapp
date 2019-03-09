@@ -7,7 +7,8 @@ import re
 import main
 
 flask_config = config(section="flask")['flask']
-FLASK_PORT = flask_config['PORT']
+FLASK_PORT = flask_config['port']
+FLASK_HOSTNAME = flask_config['server_host']
 MAIN_ENDPOINT = flask_config['main_endpoint']
 AVAILABLE_PLAYERS_ENDPOINT = flask_config['available_players_endpoint']
 MATCHES_ENDPOINT = flask_config['matches_endpoint']
@@ -17,20 +18,24 @@ ADD_PLAYER_ENDPOINT = flask_config['add_player_endpoint']
 app = Flask(__name__)
 loop = asyncio.get_event_loop()
 
+
 def build_json(records_list):
     json = []
     for record in records_list:
         json.append(dict(record))
     return json
 
+
 def is_valid_guid(guid):
     return re.match('^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',guid)
+
 
 def is_valid_limit(limit_param):
     try:
         return int(limit_param) > 0
     except ValueError:
         return False
+
 
 @app.route(MAIN_ENDPOINT)
 async def hello():
@@ -99,4 +104,4 @@ def add_player():
 
 
 if __name__ == "__main__":
-    app.run(port=FLASK_PORT)
+    app.run(host=FLASK_HOSTNAME,port=FLASK_PORT)
