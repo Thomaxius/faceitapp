@@ -5,6 +5,9 @@ import threading
 import asyncpg
 from config import postgres_config
 
+
+# Stolen entirely from rce
+
 # 15 because we have 5 threads and each has own connection pool
 # 75 connections should be more than enough for our loads
 MIN_CONNECTION_POOL_SIZE = 5
