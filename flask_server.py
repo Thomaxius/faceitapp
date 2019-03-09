@@ -7,11 +7,13 @@ import re
 import main
 
 flask_config = config(section="flask")['flask']
+FLASK_PORT = flask_config['PORT']
 MAIN_ENDPOINT = flask_config['main_endpoint']
 AVAILABLE_PLAYERS_ENDPOINT = flask_config['available_players_endpoint']
 MATCHES_ENDPOINT = flask_config['matches_endpoint']
 GET_ELO_ENDPOINT = flask_config['get_elo_endpoint']
 ADD_PLAYER_ENDPOINT = flask_config['add_player_endpoint']
+
 app = Flask(__name__)
 loop = asyncio.get_event_loop()
 
@@ -97,4 +99,4 @@ def add_player():
 
 
 if __name__ == "__main__":
-    app.run()
+    app.run(port=FLASK_PORT)
