@@ -203,6 +203,3 @@ async def tasker():
             await check_for_new_matches(record['player_guid'])
         print("Tasks done.")
         await asyncio.sleep(CHECK_INTERVAL)
-
-loop = asyncio.get_event_loop()
-loop.run_until_complete(tasker())
