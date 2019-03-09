@@ -1,5 +1,6 @@
 from flask import Flask, request
 from config import config
+from flask_cors import CORS
 import db_endpoints as db
 import asyncio
 import simplejson
@@ -16,6 +17,7 @@ GET_ELO_ENDPOINT = flask_config['get_elo_endpoint']
 ADD_PLAYER_ENDPOINT = flask_config['add_player_endpoint']
 
 app = Flask(__name__)
+CORS(app)
 loop = asyncio.get_event_loop()
 
 
@@ -35,11 +37,6 @@ def is_valid_limit(limit_param):
         return int(limit_param) > 0
     except ValueError:
         return False
-
-
-@app.route(MAIN_ENDPOINT)
-async def hello():
-    return "Hello World!"
 
 
 @app.route(MAIN_ENDPOINT + AVAILABLE_PLAYERS_ENDPOINT)
