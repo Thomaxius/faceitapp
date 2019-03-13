@@ -18,8 +18,9 @@ async def tasker():
                 await main.check_for_new_matches(record['player_guid'])
             print("Tasks done.")
             await asyncio.sleep(CHECK_INTERVAL)
-        except:
-            continue
+        except Exception as e:
+            print(e)
+            pass
 
 
 if __name__ == "__main__":

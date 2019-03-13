@@ -17,7 +17,12 @@ async def get_winner_and_loser_score(score_string): # Faceit api has score liste
 
 
 async def get_player_match_stats(match_id, player_guid, started_at, finished_at, status): # Fetch player's stats from a specific match
-    result = await faceit_api.get_match_stats(match_id)
+    try:
+        result = await faceit_api.get_match_stats(match_id)
+    except Exception as e:
+        print('error: ', e)
+        return None
+        pass
     if result:
         best_of = int(result.get("rounds")[0].get("best_of"))
         competition_id = result.get("rounds")[0].get("competition_id")
@@ -118,6 +123,7 @@ async def add_past_matches(player_guid):
                 total_found_matches = found_matches
             if tries >= 50: # We will go back 2 weeks a total number of 50 times, after which we will break and add found matches
                 tries = 0
+                print(last_searched_from_timestamp, last_searched_to_timestamp)
                 print("No more matches found")
                 finished = True
                 break
