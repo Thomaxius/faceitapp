@@ -7,11 +7,14 @@ async def insert_match(winner_team_id, best_of, competition_id, game_id, game_mo
     print("Inserted match ", winner_team_id, best_of, competition_id, game_id, game_mode, match_id, match_round, played, map, winner_team_score, loser_team_score, started_at, finished_at, status)
 
 
-async def insert_match_player_stats(player_guid, player_team, assists, deaths, headshots, headshots_percentage, kd_ratio, kr_ratio, kills, mvps, penta_kills, quadro_kills, triple_kills, match_id, win):
-    await db.execute("INSERT INTO match_player_stats (player_guid, player_team, assists, deaths, headshots, headshots_percentage, kd_ratio, kr_ratio, kills, mvps, penta_kills, quadro_kills, triple_kills, match_id, win) "
-               "SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14, $15 WHERE NOT EXISTS (SELECT match_id FROM match_player_stats WHERE match_id = $16 AND player_guid = $17)", player_guid, player_team, assists, deaths, headshots, headshots_percentage, kd_ratio, kr_ratio, kills, mvps, penta_kills, quadro_kills, triple_kills, match_id, win, match_id, player_guid)
-    print("Inserted stats ", player_guid, player_team, assists, deaths, headshots, headshots_percentage, kd_ratio, kr_ratio, kills, mvps, penta_kills, quadro_kills, triple_kills, match_id, win, match_id, player_guid)
+async def insert_match_player_stats(player_guid, player_team, player_team_kills_rank, assists, deaths, headshots, headshots_percentage, kd_ratio, kr_ratio, kills, mvps, penta_kills, quadro_kills, triple_kills, match_id, win):
+    await db.execute("INSERT INTO match_player_stats (player_guid, player_team, player_team_kills_rank, assists, deaths, headshots, headshots_percentage, kd_ratio, kr_ratio, kills, mvps, penta_kills, quadro_kills, triple_kills, match_id, win) "
+               "SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16 WHERE NOT EXISTS (SELECT match_id FROM match_player_stats WHERE match_id = $17 AND player_guid = $18)", player_guid, player_team, player_team_kills_rank, assists, deaths, headshots, headshots_percentage, kd_ratio, kr_ratio, kills, mvps, penta_kills, quadro_kills, triple_kills, match_id, win, match_id, player_guid)
+    print("Inserted stats ", player_guid, player_team, player_team_kills_rank, assists, deaths, headshots, headshots_percentage, kd_ratio, kr_ratio, kills, mvps, penta_kills, quadro_kills, triple_kills, match_id, win, match_id, player_guid)
 
+
+async def add_history_parsed_flag(player_guid):
+    await db.execute("UPDATE player SET match_history_parsed = TRUE WHERE player_guid = $1", player_guid)
 
 async def get_player_info(player_guid):
     return await db.fetchrow("SELECT * FROM player p LEFT JOIN player_nickname pn ON (pn.player_guid = p.player_guid) WHERE p.player_guid = $1", player_guid)

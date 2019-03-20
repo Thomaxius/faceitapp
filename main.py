@@ -16,6 +16,9 @@ async def get_winner_and_loser_score(score_string): # Faceit api has score liste
     return max(score_list), min(score_list)
 
 
+async def get_player_rank_in_team(players_list, player_dict):
+    return sorted(players_list, reverse=True, key=lambda x: int(x.get("player_stats").get("Kills"))).index(player_dict) + 1
+
 async def get_player_match_stats(match_id, player_guid, started_at, finished_at, status): # Fetch player's stats from a specific match
     try:
         result = await faceit_api.get_match_stats(match_id)
@@ -41,6 +44,7 @@ async def get_player_match_stats(match_id, player_guid, started_at, finished_at,
             for player in players:
                 if player.get("player_id") == player_guid: # If player is in this team
                     player_team = team.get('team_id')
+                    player_team_kills_rank = await get_player_rank_in_team(players, player)
                     assists = int(player.get("player_stats").get("Assists"))
                     deaths = int(player.get("player_stats").get("Deaths"))
                     headshots = int(player.get("player_stats").get("Headshot"))
@@ -53,7 +57,7 @@ async def get_player_match_stats(match_id, player_guid, started_at, finished_at,
                     quadro_kills = int(player.get("player_stats").get("Quadro Kills"))
                     triple_kills = int(player.get("player_stats").get("Triple Kills"))
                     win = True if int(player.get("player_stats").get("Result")) == 1 else False
-                    await db.insert_match_player_stats(player_guid, player_team, assists, deaths, headshots, headshots_percentage, kd_ratio, kr_ratio, kills, mvps, penta_kills, quadro_kills, triple_kills, match_id, win)
+                    await db.insert_match_player_stats(player_guid, player_team, player_team_kills_rank, assists, deaths, headshots, headshots_percentage, kd_ratio, kr_ratio, kills, mvps, penta_kills, quadro_kills, triple_kills, match_id, win)
 
 
 async def parse_matches(matches, player_guid): # Parse list of matches that is fetched from the API, get some general match info that is not in the match stats
@@ -178,9 +182,12 @@ async def new_player(player_nickname="", player_guid=""):
 async def check_for_new_matches(player_guid):
     print('Checking for new matches for player %s' % player_guid)
     last_match_timestamp = await db.get_latest_match_timestamp(player_guid)
-    if not last_match_timestamp:
+    result = await db.get_player_info(player_guid)
+    print(result)
+    if not result['match_history_parsed']:
         print('No matches added for player %s, checking and adding past matches..' % player_guid)
         await add_past_matches(player_guid)
+        await db.add_history_parsed_flag(player_guid)
     await add_latest_matches(player_guid, last_match_timestamp)
 
 

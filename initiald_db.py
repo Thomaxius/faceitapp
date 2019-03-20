@@ -8,6 +8,7 @@ async def create_initial_tables():
         (
 	        id serial PRIMARY KEY,
 	        player_guid VARCHAR UNIQUE,
+	        match_history_parsed boolean default FALSE,
 	        removed boolean default FALSE
 	    );
   
@@ -43,6 +44,7 @@ async def create_initial_tables():
             id serial PRIMARY KEY,
             player_guid VARCHAR REFERENCES player(player_guid) NOT NULL,
             player_team VARCHAR,
+            player_team_kills_rank SMALLINT,
             assists SMALLINT ,
             deaths SMALLINT,
             headshots SMALLINT,
