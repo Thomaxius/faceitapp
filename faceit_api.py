@@ -2,6 +2,9 @@ import requests
 from config import config
 import asyncio
 from retrying import retry
+import logger
+
+log = logger.get("FACEIT_API")
 
 faceit_config = config(section="faceit")['faceit']
 API_KEY = faceit_config['api_key']
@@ -31,6 +34,7 @@ class UnknownError(Exception):
 
 @retry(stop_max_attempt_number=7)
 async def call_api(url):
+    ratelimit_delay = 10
     result = requests.get(url, headers=DEFAULT_HEADERS)
     if result.status_code not in [200, 401, 403, 429, 404]:
         raise UnknownError(result)
@@ -39,8 +43,11 @@ async def call_api(url):
     elif result.status_code == 403:
         raise Forbidden(result.json().get("error_description", "Forbidden request"))
     elif result.status_code == 429:
-        raise Forbidden(result.json().get("error_description", "Too many requests"))
+        log.info("Hit ratelimit! Retrying in %s" % ratelimit_delay)
+        await asyncio.sleep(ratelimit_delay)
+        ratelimit_delay *= 2
     else:
+        ratelimit_delay = 0
         return result
 
 

@@ -33,7 +33,13 @@ async def create_initial_tables():
           match_type VARCHAR,
           map VARCHAR,
           winner_team_score SMALLINT,
+          winner_team_first_half_score SMALLINT,
+          winner_team_second_half_score SMALLINT,
+          winner_team_overtime_score SMALLINT,
           loser_team_score SMALLINT,
+          loser_team_first_half_score SMALLINT,
+          loser_team_second_half_score SMALLINT,
+          loser_team_overtime_score SMALLINT,
           started_at timestamptz,
           finished_at timestamptz,
           status VARCHAR
@@ -57,6 +63,7 @@ async def create_initial_tables():
             quadro_kills SMALLINT,
             triple_kills SMALLINT,
             win boolean,
+            player_skill_level SMALLINT,
             match_id VARCHAR not null REFERENCES match(match_id)
         );
         
