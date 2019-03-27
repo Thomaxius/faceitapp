@@ -3,6 +3,7 @@ import datetime
 import db_endpoints as db
 import faceit_api
 import logger
+import traceback
 from config import config
 
 log = logger.get("MAIN")
@@ -57,19 +58,33 @@ async def get_team_data(teams_list):
                    },
             }
 
+async def get_player_skill_level(match_id, player_guid):
+    match = await faceit_api.get_match_details(match_id)
+    api_version = match.get("version")
+    player_skill_level = 0
+    if api_version == 1:
+        for faction in match.get("teams"):  # For some reason, faceit sticks player's skill level in here, and other stats in the other matches endpoint..
+            for player in match.get("teams").get(faction).get("roster_v1"):
+                if player.get("guid") == player_guid:
+                    player_skill_level = int(player.get("csgo_skill_level", 0))
+    elif api_version == 2:
+        for team in [match.get("teams").get("faction1").get("roster"), match.get("teams").get("faction2").get("roster")]:  # For some reason, faceit sticks player's skill level in here, and other stats in the other matches endpoint..
+            for player in team:
+                if player.get("player_id") == player_guid:
+                    player_skill_level = int(player.get("game_skill_level", 0))
+    return player_skill_level
+
+
 async def get_player_match_stats(match, player_guid): # Fetch player's stats from a specific match
     match_id = match.get("match_id")
     started_at = match.get("started_at")
     finished_at = match.get("finished_at")
     status = match.get("status")
-    for faction in match.get("teams"): # For some reason, faceit sticks player's skill level in here, and other stats in the other matches endpoint..
-        for player in match.get("teams").get(faction).get("players"):
-            if player.get("player_id") == player_guid:
-                player_skill_level = int(player.get("skill_level"))
+    player_skill_level = await get_player_skill_level(match_id, player_guid)
     try:
         result = await faceit_api.get_match_stats(match_id)
     except Exception as e:
-        log.error('error: ', e)
+        log.error('error: %s\nTraceback: %s' % (e, traceback.format_exc()))
         return None
         pass
     if result:
@@ -147,7 +162,7 @@ async def add_past_matches(player_guid):
         tries = 0
         to_timestamp = await db.get_earliest_match_timestamp(player_guid)
         while total_found_matches < 100: # We will start working only when we have found 100 matches
-            log.info('Trying to find more matches.. (attempt %s of %s' % (tries, 50))
+            log.info('Trying to find more matches.. (attempt %s of %s)' % (tries, 50))
             if to_timestamp:
                 to_timestamp = int(to_timestamp)
             else:
@@ -170,7 +185,6 @@ async def add_past_matches(player_guid):
                 total_found_matches = found_matches
             if tries >= 50: # We will go back 2 weeks a total number of 50 times, after which we will break and add found matches
                 tries = 0
-                log.info(last_searched_from_timestamp, last_searched_to_timestamp)
                 log.info("No more matches found")
                 finished = True
                 break

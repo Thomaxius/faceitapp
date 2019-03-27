@@ -84,6 +84,15 @@ async def get_match_stats(match_id):
         raise NotFound("Match not found")
 
 
+async def get_match_details(match_id):
+    url = "https://open.faceit.com/data/v4/matches/{0}".format(match_id)
+    result = await call_api(url)
+    if result.status_code == 200:
+        return result.json()
+    if result.status_code == 404:
+        raise NotFound("Match not found")
+
+
 async def get_ranking(player_guid, region="EU", game_id="csgo"):
     url = "https://open.faceit.com/data/v4/rankings/games/{0}/regions/{1}/players/{2}".format(game_id, region, player_guid)
     result = await call_api(url)

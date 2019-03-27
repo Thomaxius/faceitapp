@@ -3,6 +3,7 @@ import asyncio
 import db_endpoints as db
 from config import config
 import logger
+import traceback
 
 log = logger.get("TASKER")
 
@@ -22,7 +23,7 @@ async def tasker():
             log.info("Tasks done.")
             await asyncio.sleep(CHECK_INTERVAL)
         except Exception as e:
-            log.error(e)
+            log.error("%s\nTraceback: %s" %(e, traceback.format_exc()))
             pass
 
 
