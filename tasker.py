@@ -17,9 +17,12 @@ async def tasker():
         try:
             records = await db.get_all_player_guids()
             for record in records:
-                await main.check_for_elo_change(record['player_guid'])
-                await main.check_and_handle_nickname_change(record['player_guid'])
-                await main.check_for_new_matches(record['player_guid'])
+                for task in [main.check_for_elo_change, main.check_and_handle_nickname_change, main.check_for_new_matches]:
+                    try:
+                        await task(record['player_guid'])
+                    except Exception as e:
+                        log.error("Error doing task %s, error: %s")
+                        pass
             log.info("Tasks done.")
             await asyncio.sleep(CHECK_INTERVAL)
         except Exception as e:
