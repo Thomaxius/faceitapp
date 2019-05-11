@@ -1,7 +1,7 @@
 from flask import Flask, request
 from config import config
 from flask_cors import CORS
-import db_endpoints as db
+import db_endpoints as db_api
 import asyncio
 import simplejson
 import re
@@ -18,7 +18,6 @@ ADD_PLAYER_ENDPOINT = flask_config['add_player_endpoint']
 
 app = Flask(__name__)
 CORS(app)
-loop = asyncio.get_event_loop()
 
 
 def build_json(records_list):
@@ -41,7 +40,8 @@ def is_valid_limit(limit_param):
 
 @app.route(MAIN_ENDPOINT + AVAILABLE_PLAYERS_ENDPOINT)
 def get_available_players():
-    jsonList = build_json(loop.run_until_complete(db.get_all_available_players()))
+    loop = asyncio.new_event_loop()
+    jsonList = build_json(loop.run_until_complete(db_api.get_all_available_players()))
     return simplejson.dumps(jsonList)
 
 
@@ -49,38 +49,43 @@ def get_available_players():
 def get_all_matches_by_guid():
     guid = request.args.get('guid')
     limit = request.args.get('limit')
+    loop = asyncio.new_event_loop()
     if is_valid_guid(guid):
         if limit and is_valid_limit(limit):
             limit = int(limit)
         else:
             limit = None
-        records = loop.run_until_complete(db.get_matches_by_guid(guid, limit))
+        records = loop.run_until_complete(db_api.get_matches_by_guid(guid, limit))
         records_as_json = build_json(records)
         return simplejson.dumps(records_as_json)
     else:
         return "Error: GUID is not in a valid format."
-
 
 @app.route(MAIN_ENDPOINT + GET_ELO_ENDPOINT)
 def get_elo_of_player():
     guid = request.args.get('guid')
     limit = request.args.get('limit')
+    loop = asyncio.new_event_loop()
     if is_valid_guid(guid):
         if limit and is_valid_limit(limit):
             limit = int(limit)
         else:
             limit = None
-        records = loop.run_until_complete(db.get_elo_history_of_player(guid, limit))
+        try:
+            records = loop.run_until_complete(db_api.get_elo_history_of_player(guid, limit))
+        except Exception as e:
+            print(e, "error!")
+            return "There was an error lol"
         records_as_json = build_json(records)
         return simplejson.dumps(records_as_json)
     else:
         return "Error: GUID is not in a valid format."
 
-
 @app.route(MAIN_ENDPOINT + ADD_PLAYER_ENDPOINT)
 def add_player():
     guid = request.args.get('guid')
     nickname = request.args.get('nickname')
+    loop = asyncio.new_event_loop()
     if not guid and not nickname:
         return "You must supply either a nickname or a faceit guid."
     if guid:
@@ -98,7 +103,6 @@ def add_player():
             return "User %s added succesfully." % nickname
         except Exception as e:
             return "Error: %s" % e
-
 
 if __name__ == "__main__":
     app.run(host=FLASK_HOSTNAME,port=FLASK_PORT)

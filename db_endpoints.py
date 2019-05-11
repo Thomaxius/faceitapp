@@ -48,7 +48,7 @@ async def get_elo_history_of_player(player_guid, limit):
 
 async def get_matches_by_guid(player_guid, limit):
     limit_string = "LIMIT {0}".format(limit) if limit else ''
-    return await db.fetch("SELECT mps.match_id, player_team_kills_rank, assists, deaths, headshots, headshots_percentage, kd_ratio, kr_ratio, kills, "
+    return await db.fetch("SELECT mps.match_id, map, player_team_kills_rank, assists, deaths, headshots, headshots_percentage, kd_ratio, kr_ratio, kills, "
                      "mvps, penta_kills, quadro_kills, triple_kills, win, winner_team_score, loser_team_score, "
                      "extract(epoch from started_at) as started_at, extract(epoch from finished_at) as finished_at "
                      "from match_player_stats mps JOIN match m ON (m.match_id = mps.match_id) "
