@@ -21,7 +21,7 @@ async def tasker():
                     try:
                         await task(record['player_guid'])
                     except Exception as e:
-                        log.error("Error doing task %s, error: %s, trackeback: %s" % (task, error, traceback.format_exc()))
+                        log.error("Error doing task %s, error: %s, trackeback: %s" % (task, e, traceback.format_exc()))
                         pass
             log.info("Tasks done.")
             await asyncio.sleep(CHECK_INTERVAL)
