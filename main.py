@@ -76,6 +76,13 @@ async def get_player_skill_level(match_id, player_guid):
 
 
 async def get_player_match_stats(match, player_guid): # Fetch player's stats from a specific match
+    log.debug("Handling match %s" % match.get("match_id"))
+    game_id = match.get("game_id")
+    log.info(game_id)
+    if game_id != 'csgo':
+        log.info("This match is not csgo, skipping. game: %s" % game_id)
+        log.debug("This match is not csgo, skipping. game id %s, match id: %s" % (game_id, match))
+        return None
     match_id = match.get("match_id")
     started_at = match.get("started_at")
     finished_at = match.get("finished_at")
